@@ -1,5 +1,6 @@
 PySide6
-sentence-transformers
-keyboard
-pywin32
+onnxruntime
+tokenizers
 numpy
+pywin32
+keyboard
