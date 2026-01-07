@@ -85,8 +85,47 @@ class IntentClassifier:
                 highest_score = score
                 best_intent = intent
         
-        # Simple entity extraction
-        words = user_query.split()
-        entity = " ".join(words[1:]) if len(words) > 1 else ""
+        # Smart Entity Extraction (Option B)
+        entity = self.extract_entity(user_query, best_intent)
         
         return best_intent, float(highest_score), entity
+
+    def extract_entity(self, query, intent):
+        """
+        Cleans the query to find the actual object/software name.
+        """
+        clean_q = query.lower()
+        
+        # 1. Remove polite prefixes/filler
+        stop_phrases = [
+            "can you please", "could you", "would you", "please", 
+            "can you", "i want to", "hey nova", "nova"
+        ]
+        for phrase in stop_phrases:
+            clean_q = clean_q.replace(phrase, "")
+            
+        # 2. Identify Action Verbs based on Intent to strip them
+        action_verbs = []
+        if intent == "OPEN_APP":
+            action_verbs = ["open", "launch", "start", "run", "fire up"]
+        elif intent == "SEARCH_FILE":
+            action_verbs = ["find", "search for", "search", "lookup", "locate", "where is"]
+        elif intent == "WEB_SEARCH":
+            action_verbs = ["google", "search web for", "look up"]
+        
+        # Remove the verb (and everything before it if possible)
+        for verb in action_verbs:
+            if verb in clean_q:
+                # specific fix: split on verb and take the right side
+                parts = clean_q.split(verb, 1)
+                if len(parts) > 1:
+                    clean_q = parts[1] # Take what comes AFTER the verb
+                break
+                
+        # 3. Strip articles and excessive whitespace
+        clean_q = clean_q.strip()
+        if clean_q.startswith("the "): clean_q = clean_q[4:]
+        if clean_q.startswith("a "): clean_q = clean_q[2:]
+        if clean_q.startswith("an "): clean_q = clean_q[3:]
+        
+        return clean_q.strip()
