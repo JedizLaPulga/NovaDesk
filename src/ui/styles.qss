@@ -1,0 +1,42 @@
+/* Main Window Background */
+QMainWindow {
+    background-color: #1e1e2e; /* Dark Blue-Grey / Catppuccin Base */
+    border: 1px solid #45475a;
+    border-radius: 12px;
+}
+
+/* Input Search Bar */
+QLineEdit {
+    background-color: #313244; /* Slightly lighter surface */
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 18px;
+    color: #cdd6f4; /* Text color */
+    selection-background-color: #89b4fa;
+}
+
+QLineEdit:focus {
+    border: 2px solid #89b4fa; /* Accent Blue focus ring */
+    background-color: #45475a; 
+}
+
+/* Results List (Placeholder for later) */
+QListWidget {
+    background-color: transparent;
+    border: none;
+    color: #a6adc8;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+QListWidget::item {
+    padding: 10px;
+    border-radius: 6px;
+}
+
+QListWidget::item:selected {
+    background-color: #45475a;
+    color: #ffffff;
+}

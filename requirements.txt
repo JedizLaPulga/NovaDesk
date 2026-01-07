@@ -1,0 +1,5 @@
+PySide6
+sentence-transformers
+keyboard
+pywin32
+numpy
