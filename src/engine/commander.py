@@ -11,6 +11,7 @@ class AppIndexer:
         self.common_aliases = {
             "browser": ["google chrome", "microsoft edge", "firefox", "brave"],
             "internet": ["google chrome", "microsoft edge"],
+            "web": ["google chrome", "microsoft edge"],
             "editor": ["visual studio code", "notepad++", "notepad"],
             "calc": ["calculator"],
             "music": ["spotify", "youtube music"],
