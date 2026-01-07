@@ -3,6 +3,7 @@ import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
 import spacy
+import difflib
 from src.engine.knowledge_base import INTENT_DB
 
 class IntentClassifier:
@@ -26,14 +27,42 @@ class IntentClassifier:
         print("Loading spaCy Model...")
         self.nlp_spacy = spacy.load("en_core_web_sm")
         
-        # --- Pre-compute Knowledge Base Embeddings ---
-        self.intent_prototypes = [] # List of (embedding, intent_id)
+        # --- Pre-compute Knowledge Base Embeddings & Vocabulary ---
+        self.intent_prototypes = [] 
+        self.vocab = set()
         
         print("Indexing Knowledge Base...")
         for intent_id, data in INTENT_DB.items():
             for trigger in data["triggers"]:
+                # 1. Embeddings
                 emb = self.encode(trigger)
                 self.intent_prototypes.append((emb, intent_id))
+                
+                # 2. Build Vocabulary for Spell Checker
+                words = trigger.lower().split()
+                self.vocab.update(words)
+
+    def correct_query(self, query):
+        """
+        Domain-Specific Auto-Correct.
+        Fixes 'broswer' -> 'browser', 'sappotify' -> 'spotify' (if in vocab).
+        """
+        words = query.lower().split()
+        corrected_words = []
+        
+        for word in words:
+            if word in self.vocab:
+                corrected_words.append(word)
+            else:
+                # Try to find a close match in our domain vocabulary
+                matches = difflib.get_close_matches(word, self.vocab, n=1, cutoff=0.8)
+                if matches:
+                    print(f"Auto-Correct: {word} -> {matches[0]}")
+                    corrected_words.append(matches[0])
+                else:
+                    corrected_words.append(word)
+                    
+        return " ".join(corrected_words)
 
     def encode(self, text):
         encoded = self.tokenizer.encode(text)
@@ -59,6 +88,12 @@ class IntentClassifier:
         return (mean_pooled / norm).flatten()
 
     def predict(self, user_query):
+        # 0. Auto-Correct Typo
+        original_query = user_query
+        user_query = self.correct_query(user_query)
+        if user_query != original_query:
+            print(f"Corrected: '{original_query}' -> '{user_query}'")
+            
         query_embedding = self.encode(user_query)
         
         best_intent = None

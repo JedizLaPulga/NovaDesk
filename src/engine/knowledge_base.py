@@ -5,17 +5,17 @@ INTENT_DB = {
     "APP_BROWSER": {
         "triggers": ["open browser", "start internet", "launch chrome", "go online", "open web"],
         "action": "open_priority_app",
-        "targets": ["chrome", "msedge", "firefox", "brave", "opera"]
+        "targets": ["chrome", "edge", "firefox", "brave", "opera", "vivaldi"] 
     },
     "APP_MUSIC": {
         "triggers": ["open music", "play tunes", "start spotify", "launch apple music", "play music"],
         "action": "open_priority_app",
-        "targets": ["spotify", "music", "itunes", "aimp", "vlc"] 
+        "targets": ["spotify", "music", "itunes", "vlc", "media player", "aimp"] 
     },
     "APP_CODE": {
         "triggers": ["open code", "start coding", "launch vscode", "open editor", "start ide"],
         "action": "open_priority_app",
-        "targets": ["code", "visual studio", "sublime", "notepad++", "pycharm", "cursor"]
+        "targets": ["visual studio code", "notepad", "sublime", "pycharm", "cursor", "atom", "intellij"]
     },
     "APP_TERMINAL": {
         "triggers": ["open terminal", "start cmd", "open powershell", "command prompt", "run cli"],
