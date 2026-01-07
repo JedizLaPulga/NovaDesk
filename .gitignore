@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Tooling
+.vscode/
+.idea/
+
+# Distribution / PyInstaller
+build/
+dist/
+*.spec
+
+# NovaDesk Specific
+*.log
+src/engine/model_cache/  # If we cache the MiniLM model locally
