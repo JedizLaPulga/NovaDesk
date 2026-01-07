@@ -77,6 +77,14 @@ class Commander:
     def fetch_candidates(self, intent_id, entity):
         candidates = []
         
+        if intent_id == "WEB_SEARCH":
+            candidates.append({
+                "name": f"Search Google for '{entity}'",
+                "path": f"web_search:{entity}",
+                "type": "action"
+            })
+            return candidates
+
         if intent_id in INTENT_DB:
             intent_data = INTENT_DB[intent_id]
             targets = intent_data.get("targets", [])
@@ -116,6 +124,13 @@ class Commander:
         return f"Could not find any installed app for this category ({target_list[0]})."
 
     def handle_generic_open(self, app_name):
+        # 1. Special Actions
+        if app_name.startswith("web_search:"):
+            query = app_name.replace("web_search:", "")
+            webbrowser.open(f"https://www.google.com/search?q={query}")
+            return f"Opened Google Search for: {query}"
+
+        # 2. App Indexer
         path = self.indexer.fuzzy_find(app_name)
         if path:
             os.startfile(path)

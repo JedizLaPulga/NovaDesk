@@ -1,8 +1,10 @@
+import sys
+import os
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLabel, QLineEdit, QListWidget, 
                                QApplication, QListWidgetItem)
 from PySide6.QtCore import Qt, QSize, QThread, Signal
-from PySide6.QtGui import QColor, QPalette, QFont
+from PySide6.QtGui import QColor, QPalette, QFont, QIcon, QPixmap
 
 # Thread to load the AI Model without freezing the UI
 class LoaderThread(QThread):
@@ -20,7 +22,12 @@ class LoaderThread(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("NovaDesk")
+        self.setWindowTitle("NovaDesk v0.1")
+        
+        # Set App Icon (Taskbar)
+        icon_path = "img/NovaDesk.png"
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
         
         self.nlp = None
         self.commander = None
@@ -113,11 +120,22 @@ class MainWindow(QMainWindow):
         self.title_bar = QWidget()
         self.title_bar.setObjectName("TitleBar")
         header_layout = QHBoxLayout(self.title_bar)
-        header_layout.setContentsMargins(5, 0, 5, 0)
+        header_layout.setContentsMargins(10, 0, 5, 0) # Slightly more left margin for logo
         
-        title_label = QLabel("✨ NovaDesk")
-        title_label.setStyleSheet("color: #a6adc8; font-weight: bold; font-size: 13px;")
-
+        # Logo Icon
+        logo_label = QLabel()
+        logo_pixmap = QPixmap("img/NovaDesk.png")
+        if not logo_pixmap.isNull():
+            logo_label.setPixmap(logo_pixmap.scaled(20, 20, Qt.KeepAspectRatio, Qt.SmoothTransformation))
+            logo_label.setFixedSize(20, 20)
+            header_layout.addWidget(logo_label)
+            
+        # Title Text
+        title_label = QLabel("NovaDesk v0.1")
+        title_label.setStyleSheet("color: #a6adc8; font-weight: bold; font-size: 13px; margin-left: 5px;")
+        header_layout.addWidget(title_label)
+        
+        # Window Controls
         self.btn_min = QPushButton("－")
         self.btn_min.setObjectName("BtnMinimize")
         self.btn_min.setFixedSize(30, 30)
@@ -127,8 +145,7 @@ class MainWindow(QMainWindow):
         self.btn_close.setObjectName("BtnClose")
         self.btn_close.setFixedSize(30, 30)
         self.btn_close.clicked.connect(self.close)
-        
-        header_layout.addWidget(title_label)
+
         header_layout.addStretch()
         header_layout.addWidget(self.btn_min)
         header_layout.addWidget(self.btn_close)
@@ -214,9 +231,9 @@ class MainWindow(QMainWindow):
                     }
                 """)
                 
-                # Connect Button using a lambda to capture specific app name
-                # We use app['name'] for execution
-                open_btn.clicked.connect(lambda checked=False, n=app['name']: self.execute_suggestion(n))
+                # Connect Button using a lambda to capture specific app path/command
+                # We usage app['path'] for execution (contains full path or special command)
+                open_btn.clicked.connect(lambda checked=False, p=app['path']: self.execute_suggestion(p))
                 
                 layout.addWidget(name_label)
                 layout.addStretch()
