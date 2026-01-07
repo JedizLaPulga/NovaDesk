@@ -4,3 +4,6 @@ tokenizers
 numpy
 pywin32
 keyboard
+
+SpeechRecognition
+PyAudio
