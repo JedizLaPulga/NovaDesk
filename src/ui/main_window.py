@@ -102,10 +102,23 @@ class MainWindow(QMainWindow):
         
         # 1. Predict Intent
         intent, score, entity = self.nlp.predict(query)
+        
+        # 2. Heuristic Override: Single Word App Launch
+        # If confidence is low, but the query itself is a valid app, treat as Open App.
+        if score < 0.4:
+            # Check if the raw query matches an app
+            # (Note: we access the indexer safely via commander)
+            potential_app = self.commander.indexer.find_best_match(query)
+            if potential_app:
+                intent = "OPEN_APP"
+                entity = query
+                score = 0.99 # Boost confidence
+                self.results_list.addItem(f"💡 Recognized App: {query}")
+
         self.results_list.addItem(f"Intent: {intent} ({score:.2f}) | Entity: {entity}")
         self.results_list.scrollToBottom()
 
-        # 2. Execute
+        # 3. Execute
         if score > 0.3: # Confidence threshold
             result_msg = self.commander.execute(intent, entity)
             self.results_list.addItem(f"✅ {result_msg}")
