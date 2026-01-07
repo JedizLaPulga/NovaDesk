@@ -6,12 +6,16 @@ class SoundEngine:
     Lightweight Sound Wrapper using native Windows sounds.
     Zero external dependencies.
     """
+    ENABLED = False # Default OFF
     
     @staticmethod
     def play(sound_type):
         """
         Types: 'startup', 'success', 'error', 'click'
         """
+        if not SoundEngine.ENABLED:
+            return
+
         # Run in thread to ensure it never blocks the UI
         threading.Thread(target=SoundEngine._play_worker, args=(sound_type,), daemon=True).start()
 

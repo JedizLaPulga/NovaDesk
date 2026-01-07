@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QApplication, QListWidgetItem)
 from PySide6.QtCore import Qt, QSize, QThread, Signal
 from PySide6.QtGui import QColor, QPalette, QFont, QIcon, QPixmap
+from src.engine.sound import SoundEngine
 
 # Thread to load the AI Model without freezing the UI
 class LoaderThread(QThread):
@@ -166,6 +167,7 @@ class MainWindow(QMainWindow):
         self.search_input.setPlaceholderText("Ask NovaDesk... (e.g. 'Open Spotify')")
         self.search_input.setEnabled(True)
         self.search_input.setFocus()
+        SoundEngine.play('startup')
 
     def load_stylesheet(self):
         try:
@@ -196,6 +198,7 @@ class MainWindow(QMainWindow):
         candidates = self.commander.fetch_candidates(intent, entity)
         
         if candidates:
+            SoundEngine.play('search')
             # Add Header
             header = QListWidgetItem(f"✨ Found {len(candidates)} suggestions for '{query}':")
             header.setFlags(Qt.NoItemFlags) # Make header non-selectable
@@ -247,6 +250,7 @@ class MainWindow(QMainWindow):
             if score > 0.35:
                 result_msg = self.commander.execute(intent, entity)
                 self.results_list.addItem(f"✅ {result_msg}")
+                SoundEngine.play('success')
             else:
                 self.results_list.addItem("❓ I'm not sure what you mean.")
             
@@ -261,6 +265,7 @@ class MainWindow(QMainWindow):
         # Update status
         self.results_list.addItem(f"✅ {msg}")
         self.results_list.scrollToBottom()
+        SoundEngine.play('success')
 
     def mousePressEvent(self, event):
         self.oldPos = event.globalPos()
