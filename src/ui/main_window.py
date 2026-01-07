@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                                QApplication, QListWidgetItem)
 from PySide6.QtCore import Qt, QSize, QThread, Signal
 from PySide6.QtGui import QColor, QPalette, QFont, QIcon, QPixmap
+from src.engine.voice import VoiceEngine
 
 # Thread to load the AI Model without freezing the UI
 class LoaderThread(QThread):
@@ -17,6 +18,14 @@ class LoaderThread(QThread):
         nlp = IntentClassifier()
         cmd = Commander()
         self.loaded.emit(nlp, cmd)
+
+class VoiceWorker(QThread):
+    finished = Signal(str)
+    
+    def run(self):
+        engine = VoiceEngine()
+        text = engine.listen_one_shot()
+        self.finished.emit(text if text else "")
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -48,13 +57,40 @@ class MainWindow(QMainWindow):
         # 3. Custom Title Bar
         self.setup_title_bar()
         
-        # 4. Search Bar
+        # 4. Search Area (Input + Mic)
+        search_widget = QWidget()
+        search_layout = QHBoxLayout(search_widget)
+        search_layout.setContentsMargins(0, 0, 0, 0)
+        search_layout.setSpacing(10)
+
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Initializing Brain... please wait")
         self.search_input.setEnabled(False)
         self.search_input.returnPressed.connect(self.process_command)
         
-        self.layout.addWidget(self.search_input)
+        self.btn_mic = QPushButton("🎙️")
+        self.btn_mic.setFixedSize(45, 45) # Slightly bigger for easy tap
+        self.btn_mic.setCursor(Qt.PointingHandCursor)
+        self.btn_mic.setToolTip("Click to Speak")
+        self.btn_mic.setStyleSheet("""
+            QPushButton {
+                background-color: #313244;
+                color: #cdd6f4;
+                border-radius: 8px;
+                font-size: 20px;
+                border: 1px solid #45475a;
+            }
+            QPushButton:hover {
+                background-color: #45475a;
+                border-color: #585b70;
+            }
+        """)
+        self.btn_mic.clicked.connect(self.toggle_voice)
+        
+        search_layout.addWidget(self.search_input)
+        search_layout.addWidget(self.btn_mic)
+        
+        self.layout.addWidget(search_widget)
         
         # 5. Results List
         self.results_list = QListWidget()
@@ -157,6 +193,42 @@ class MainWindow(QMainWindow):
         self.results_list.hide()
         self.resize(950, 150)
         self.center_on_screen()
+
+    def toggle_voice(self):
+        # UI Feedback: Listening
+        self.btn_mic.setStyleSheet("background-color: #f38ba8; color: #1e1e2e; border-radius: 8px; font-size: 20px;")
+        self.search_input.setPlaceholderText("Listening...")
+        self.search_input.setEnabled(False)
+        self.btn_mic.setEnabled(False)
+        
+        self.worker = VoiceWorker()
+        self.worker.finished.connect(self.on_voice_result)
+        self.worker.start()
+
+    def on_voice_result(self, text):
+        # Reset UI
+        self.btn_mic.setEnabled(True)
+        self.search_input.setEnabled(True)
+        self.btn_mic.setStyleSheet("""
+            QPushButton {
+                background-color: #313244;
+                color: #cdd6f4;
+                border-radius: 8px;
+                font-size: 20px;
+                border: 1px solid #45475a;
+            }
+            QPushButton:hover {
+                background-color: #45475a;
+                border-color: #585b70;
+            }
+        """)
+        
+        if text:
+            self.search_input.setText(text)
+            self.process_command() # Auto-process
+        else:
+            self.search_input.setPlaceholderText("Ask NovaDesk...")
+            self.search_input.setFocus()
 
     def on_ai_loaded(self, nlp, commander):
         self.nlp = nlp
