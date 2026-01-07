@@ -1,67 +1,92 @@
+import os
 import numpy as np
-from sentence_transformers import SentenceTransformer, util
+import onnxruntime as ort
+from tokenizers import Tokenizer
 
 class IntentClassifier:
-    def __init__(self, model_name='all-MiniLM-L6-v2'):
+    def __init__(self):
         """
-        Initialize the NLP engine.
-        Using MiniLM for fast, CPU-based embedding generation.
+        Initialize the NLP engine using ONNX Runtime.
+        This removes the heavy PyTorch dependency.
         """
-        print("Loading AI Model... (this may take a moment first run)")
-        self.model = SentenceTransformer(model_name)
+        print("Loading ONNX Model...")
         
-        # Define Known Intents and their prototype phrases
+        # Path to cached model
+        model_path = os.path.join("src", "engine", "model_cache", "onnx", "model.onnx")
+        tokenizer_path = os.path.join("src", "engine", "model_cache", "tokenizer.json")
+        
+        # Load Tokenizer
+        self.tokenizer = Tokenizer.from_file(tokenizer_path)
+        self.tokenizer.enable_padding(pad_id=0, pad_token="[PAD]", length=512)
+        self.tokenizer.enable_truncation(max_length=512)
+        
+        # Load ONNX Session
+        sess_options = ort.SessionOptions()
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        self.session = ort.InferenceSession(model_path, sess_options)
+        
+        # Define Intents
         self.intents = {
-            "OPEN_APP": [
-                "open google chrome", "launch spotify", "start notepad", 
-                "run visual studio code", "open calculator"
-            ],
-            "SEARCH_FILE": [
-                "find resume.pdf", "search for holiday photos", 
-                "where is the budget excel sheet", "locate my notes"
-            ],
-            "SYSTEM_CONTROL": [
-                "volume up", "mute system", "lock screen", 
-                "shutdown computer", "turn off pc"
-            ],
-            "WEB_SEARCH": [
-                "google how to cook pasta", "search web for weather",
-                "look up elon musk"
-            ]
+            "OPEN_APP": ["open google chrome", "launch notepad", "start spotify"],
+            "SEARCH_FILE": ["find resume.pdf", "search for budget.xlsx"],
+            "SYSTEM_CONTROL": ["mute volume", "shutdown pc", "lock screen"],
+            "WEB_SEARCH": ["google pizza recipe", "search youtube for cats"]
         }
         
-        # Pre-compute embeddings for prototypes
+        # Pre-compute prototype embeddings
         self.intent_embeddings = {}
         for intent, phrases in self.intents.items():
-            self.intent_embeddings[intent] = self.model.encode(phrases)
+            # Average embedding of all phrases for robust prototype
+            embeddings = [self.encode(p) for p in phrases]
+            self.intent_embeddings[intent] = np.mean(embeddings, axis=0)
+
+    def encode(self, text):
+        """
+        Runs the ONNX model to get the sentence embedding.
+        """
+        encoded = self.tokenizer.encode(text)
+        input_ids = np.array([encoded.ids], dtype=np.int64)
+        attention_mask = np.array([encoded.attention_mask], dtype=np.int64)
+        token_type_ids = np.array([encoded.type_ids], dtype=np.int64)
+        
+        inputs = {
+            'input_ids': input_ids,
+            'attention_mask': attention_mask,
+            'token_type_ids': token_type_ids
+        }
+        
+        # Run inference
+        outputs = self.session.run(None, inputs)
+        
+        # Output[0] is 'last_hidden_state' (batch, seq, hidden)
+        last_hidden_state = outputs[0]
+        
+        # Mean Pooling
+        # Exclude padding tokens from average
+        mask_expanded = np.expand_dims(attention_mask, -1) # (batch, seq, 1)
+        sum_embeddings = np.sum(last_hidden_state * mask_expanded, axis=1)
+        sum_mask = np.clip(np.sum(mask_expanded, axis=1), a_min=1e-9, a_max=None)
+        mean_pooled = sum_embeddings / sum_mask
+        
+        # Normalize
+        norm = np.linalg.norm(mean_pooled, axis=1, keepdims=True)
+        return (mean_pooled / norm).flatten()
 
     def predict(self, user_query):
-        """
-        Returns the (intent, confidence, entity) tuple.
-        Entity extraction here is heuristic-based (simple string splitting) 
-        until we add a dedicated NER model or regex.
-        """
-        query_embedding = self.model.encode(user_query)
+        query_embedding = self.encode(user_query)
         
         best_intent = None
         highest_score = -1.0
         
-        # Compare query against all intent prototypes
-        for intent, embeddings in self.intent_embeddings.items():
-            # Calculate cosine similarity
-            scores = util.cos_sim(query_embedding, embeddings)[0]
-            max_score = float(np.max(scores))
-            
-            if max_score > highest_score:
-                highest_score = max_score
+        for intent, prototype_emb in self.intent_embeddings.items():
+            # Cosine Similarity
+            score = np.dot(query_embedding, prototype_emb)
+            if score > highest_score:
+                highest_score = score
                 best_intent = intent
         
-        # Simple Entity Extraction (Text after the first word typically)
-        # This is a basic heuristic; can be improved.
+        # Simple entity extraction
         words = user_query.split()
         entity = " ".join(words[1:]) if len(words) > 1 else ""
         
-        return best_intent, highest_score, entity
-
-# Singleton instance for easy import
-# nlp_engine = IntentClassifier() 
+        return best_intent, float(highest_score), entity
