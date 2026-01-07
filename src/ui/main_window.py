@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                               QPushButton, QLabel, QLineEdit, QListWidget, QApplication)
+                               QPushButton, QLabel, QLineEdit, QListWidget, 
+                               QApplication, QListWidgetItem)
 from PySide6.QtCore import Qt, QSize, QThread, Signal
 from PySide6.QtGui import QColor, QPalette, QFont
 
@@ -71,16 +72,10 @@ class MainWindow(QMainWindow):
     # ... (setup_title_bar, on_ai_loaded, load_stylesheet, center_on_screen remain same)
 
     def launch_item(self, item):
-        text = item.text()
-        if "🚀" in text:
-            # Parse app name: "🚀 Google Chrome" -> "Google Chrome"
-            app_name = text.replace("🚀 ", "").strip()
-            
-            # Execute via Commander (Generic Open will find it by fuzzy match)
-            # This is a shortcut; ideally we store the full path in UserRole
-            self.results_list.addItem(f"Executing: {app_name}...")
-            msg = self.commander.handle_generic_open(app_name)
-            self.results_list.addItem(f"✅ {msg}")
+        # Fallback for clicking the row itself (if not clicking the button)
+        # Only works if text was set, but with setItemWidget, item.text() is empty usually
+        # unless we explicitly set it. We'll leave this as legacy or empty for now.
+        pass
 
     def setup_title_bar(self):
         self.title_bar = QWidget()
@@ -133,7 +128,7 @@ class MainWindow(QMainWindow):
         query = self.search_input.text()
         if not query: return
         
-        self.results_list.clear() # Clear previous
+        self.results_list.clear() 
         self.results_list.show()
         self.resize(800, 300)
         
@@ -141,26 +136,58 @@ class MainWindow(QMainWindow):
         intent, score, entity = self.nlp.predict(query)
         print(f"Predicted: {intent} ({score}) -> {entity}")
 
-        # 2. Get Candidates (The Smart Suggestion Step)
+        # 2. Get Candidates
         candidates = self.commander.fetch_candidates(intent, entity)
         
         if candidates:
-            self.results_list.addItem(f"✨ Found {len(candidates)} suggestions for '{query}':")
-            for app in candidates:
-                # Add clickable item
-                # Format: "[App Name]  --  (Click to Open)"
-                item_text = f"🚀 {app['name']}"
-                self.results_list.addItem(item_text)
-                
-                # Store data in item (using separate logic in a minute, for now just text)
-                # Ideally we sublcass QListWidgetItem, but for simplicity we'll just handle clicks via text matching
-                # or lazy execution:
+            # Add Header
+            header = QListWidgetItem(f"✨ Found {len(candidates)} suggestions for '{query}':")
+            header.setFlags(Qt.NoItemFlags) # Make header non-selectable
+            self.results_list.addItem(header)
             
-            # Auto-click handling logic needs to be in a separate slot (on_item_clicked)
-            # We will wire that up in __init__
+            for app in candidates:
+                # Create Item
+                item = QListWidgetItem(self.results_list)
+                
+                # Create Custom Widget for the Item
+                widget = QWidget()
+                layout = QHBoxLayout(widget)
+                layout.setContentsMargins(10, 5, 10, 5)
+                
+                # App Name Label
+                name_label = QLabel(f"🚀 {app['name']}")
+                name_label.setStyleSheet("color: #cdd6f4; font-size: 15px; font-weight: 500;")
+                
+                # OPEN Button (Compact Icon Style)
+                open_btn = QPushButton("➜")
+                open_btn.setCursor(Qt.PointingHandCursor)
+                open_btn.setFixedSize(40, 30)
+                open_btn.setStyleSheet("""
+                    QPushButton {
+                        background-color: #89b4fa; 
+                        color: #1e1e2e; 
+                        border-radius: 15px; /* Circular aesthetics */
+                        font-weight: bold;
+                        font-size: 16px;
+                    }
+                    QPushButton:hover {
+                        background-color: #b4befe;
+                    }
+                """)
+                
+                # Connect Button using a lambda to capture specific app name
+                # We use app['name'] for execution
+                open_btn.clicked.connect(lambda checked=False, n=app['name']: self.execute_suggestion(n))
+                
+                layout.addWidget(name_label)
+                layout.addStretch()
+                layout.addWidget(open_btn)
+                
+                item.setSizeHint(widget.sizeHint())
+                self.results_list.setItemWidget(item, widget)
             
         else:
-            # 3. Direct Execution fallback if no suggestions (e.g. System Control)
+            # 3. Direct Execution fallback
             if score > 0.35:
                 result_msg = self.commander.execute(intent, entity)
                 self.results_list.addItem(f"✅ {result_msg}")
@@ -168,6 +195,16 @@ class MainWindow(QMainWindow):
                 self.results_list.addItem("❓ I'm not sure what you mean.")
             
         self.search_input.clear()
+
+    def execute_suggestion(self, app_name):
+        self.results_list.addItem(f"Executing: {app_name}...")
+        # Scroll to bottom to show action
+        self.results_list.scrollToBottom()
+        # Execute
+        msg = self.commander.handle_generic_open(app_name)
+        # Update status
+        self.results_list.addItem(f"✅ {msg}")
+        self.results_list.scrollToBottom()
 
     def mousePressEvent(self, event):
         self.oldPos = event.globalPos()
