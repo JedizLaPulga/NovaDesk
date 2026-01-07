@@ -36,8 +36,8 @@ class MainWindow(QMainWindow):
         
         # Main Layout
         self.layout = QVBoxLayout(self.central_widget)
-        self.layout.setContentsMargins(10, 10, 10, 15)
-        self.layout.setSpacing(5)
+        self.layout.setContentsMargins(20, 20, 20, 20)
+        self.layout.setSpacing(15)
         
         # 3. Custom Title Bar
         self.setup_title_bar()
@@ -55,11 +55,43 @@ class MainWindow(QMainWindow):
         
         self.layout.addWidget(self.search_input)
         self.layout.addWidget(self.results_list)
+
+        # 6. Footer
+        self.setup_footer()
         
         self.setCentralWidget(self.central_widget)
+
+    def setup_footer(self):
+        footer_widget = QWidget()
+        footer_layout = QHBoxLayout(footer_widget)
+        footer_layout.setContentsMargins(5, 0, 5, 0)
+        
+        self.btn_clear_history = QPushButton("Clear History")
+        self.btn_clear_history.setCursor(Qt.PointingHandCursor)
+        self.btn_clear_history.setFixedSize(100, 30)
+        self.btn_clear_history.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: 1px solid #f38ba8;
+                color: #f38ba8;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #f38ba8;
+                color: #1e1e2e;
+            }
+        """)
+        self.btn_clear_history.clicked.connect(self.clear_interface)
+        
+        footer_layout.addWidget(self.btn_clear_history)
+        footer_layout.addStretch()
+        
+        self.layout.addWidget(footer_widget)
         
         # 6. Sizing
-        self.resize(800, 120) 
+        self.resize(950, 150) 
         self.center_on_screen()
         
         self.load_stylesheet()
@@ -85,7 +117,7 @@ class MainWindow(QMainWindow):
         
         title_label = QLabel("✨ NovaDesk")
         title_label.setStyleSheet("color: #a6adc8; font-weight: bold; font-size: 13px;")
-        
+
         self.btn_min = QPushButton("－")
         self.btn_min.setObjectName("BtnMinimize")
         self.btn_min.setFixedSize(30, 30)
@@ -102,6 +134,13 @@ class MainWindow(QMainWindow):
         header_layout.addWidget(self.btn_close)
         
         self.layout.addWidget(self.title_bar)
+
+    def clear_interface(self):
+        self.search_input.clear()
+        self.results_list.clear()
+        self.results_list.hide()
+        self.resize(950, 150)
+        self.center_on_screen()
 
     def on_ai_loaded(self, nlp, commander):
         self.nlp = nlp
@@ -130,7 +169,7 @@ class MainWindow(QMainWindow):
         
         self.results_list.clear() 
         self.results_list.show()
-        self.resize(800, 300)
+        self.resize(950, 500)
         
         # 1. Predict Intent
         intent, score, entity = self.nlp.predict(query)
@@ -152,7 +191,7 @@ class MainWindow(QMainWindow):
                 # Create Custom Widget for the Item
                 widget = QWidget()
                 layout = QHBoxLayout(widget)
-                layout.setContentsMargins(10, 5, 10, 5)
+                layout.setContentsMargins(20, 10, 20, 10)
                 
                 # App Name Label
                 name_label = QLabel(f"🚀 {app['name']}")
