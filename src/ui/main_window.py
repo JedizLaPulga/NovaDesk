@@ -93,12 +93,61 @@ class MainWindow(QMainWindow):
         """)
         self.btn_clear_history.clicked.connect(self.clear_interface)
         
+        # Sound Toggle
+        self.btn_sound = QPushButton("Sound: OFF")
+        self.btn_sound.setCursor(Qt.PointingHandCursor)
+        self.btn_sound.setFixedSize(100, 30)
+        self.btn_sound.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: 1px solid #6c7086;
+                color: #6c7086;
+                border-radius: 6px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                border: 1px solid #a6adc8;
+                color: #a6adc8;
+            }
+        """)
+        self.btn_sound.clicked.connect(self.toggle_sound)
+
         footer_layout.addWidget(self.btn_clear_history)
+        footer_layout.addWidget(self.btn_sound)
         footer_layout.addStretch()
         
         self.layout.addWidget(footer_widget)
         
         # 6. Sizing
+
+    def toggle_sound(self):
+        SoundEngine.ENABLED = not SoundEngine.ENABLED
+        if SoundEngine.ENABLED:
+            self.btn_sound.setText("Sound: ON")
+            self.btn_sound.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    border: 1px solid #a6e3a1;
+                    color: #a6e3a1;
+                    border-radius: 6px;
+                    font-weight: bold;
+                    font-size: 12px;
+                }
+            """)
+            SoundEngine.play('success')
+        else:
+            self.btn_sound.setText("Sound: OFF")
+            self.btn_sound.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    border: 1px solid #6c7086;
+                    color: #6c7086;
+                    border-radius: 6px;
+                    font-weight: bold;
+                    font-size: 12px;
+                }
+            """)
         self.resize(950, 150) 
         self.center_on_screen()
         
