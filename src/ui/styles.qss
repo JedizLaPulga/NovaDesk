@@ -1,24 +1,60 @@
 /* Main Window Background */
 QMainWindow {
-    background-color: #1e1e2e; /* Dark Blue-Grey / Catppuccin Base */
+    background-color: transparent;
+}
+
+#CentralWidget {
+    background-color: #1e1e2e;
     border: 1px solid #45475a;
     border-radius: 12px;
 }
 
+/* Title Bar Area */
+#TitleBar {
+    background-color: transparent;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+/* Window Controls */
+QPushButton {
+    border: none;
+    border-radius: 6px;
+    color: #a6adc8;
+    font-weight: bold;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 14px;
+}
+
+QPushButton:hover {
+    background-color: #313244;
+    color: #ffffff;
+}
+
+#BtnClose:hover {
+    background-color: #f38ba8; /* Red for close */
+    color: #11111b;
+}
+
+#BtnMinimize:hover {
+    background-color: #89b4fa; /* Blue for minimize */
+    color: #11111b;
+}
+
 /* Input Search Bar */
 QLineEdit {
-    background-color: #313244; /* Slightly lighter surface */
+    background-color: #313244; 
     border: none;
     border-radius: 8px;
-    padding: 12px;
+    padding: 14px;
     font-family: 'Segoe UI', sans-serif;
-    font-size: 18px;
-    color: #cdd6f4; /* Text color */
+    font-size: 20px; /* Larger font */
+    color: #cdd6f4; 
     selection-background-color: #89b4fa;
 }
 
 QLineEdit:focus {
-    border: 2px solid #89b4fa; /* Accent Blue focus ring */
+    border: 2px solid #89b4fa; 
     background-color: #45475a; 
 }
 

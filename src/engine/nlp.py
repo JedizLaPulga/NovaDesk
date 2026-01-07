@@ -3,11 +3,13 @@ import numpy as np
 import onnxruntime as ort
 from tokenizers import Tokenizer
 import spacy
+from src.engine.knowledge_base import INTENT_DB
 
 class IntentClassifier:
     def __init__(self):
         """
         Initialize the NLP engine using ONNX Runtime (Intent) + spaCy (Entity).
+        Backed by the detailed Knowledge Base.
         """
         print("Loading ONNX Model...")
         model_path = os.path.join("src", "engine", "model_cache", "onnx", "model.onnx")
@@ -24,19 +26,14 @@ class IntentClassifier:
         print("Loading spaCy Model...")
         self.nlp_spacy = spacy.load("en_core_web_sm")
         
-        # Define Intents
-        self.intents = {
-            "OPEN_APP": ["open google chrome", "launch notepad", "start spotify"],
-            "SEARCH_FILE": ["find resume.pdf", "search for budget.xlsx"],
-            "SYSTEM_CONTROL": ["mute volume", "shutdown pc", "lock screen"],
-            "WEB_SEARCH": ["google pizza recipe", "search youtube for cats"]
-        }
+        # --- Pre-compute Knowledge Base Embeddings ---
+        self.intent_prototypes = [] # List of (embedding, intent_id)
         
-        # Pre-compute prototype embeddings
-        self.intent_embeddings = {}
-        for intent, phrases in self.intents.items():
-            embeddings = [self.encode(p) for p in phrases]
-            self.intent_embeddings[intent] = np.mean(embeddings, axis=0)
+        print("Indexing Knowledge Base...")
+        for intent_id, data in INTENT_DB.items():
+            for trigger in data["triggers"]:
+                emb = self.encode(trigger)
+                self.intent_prototypes.append((emb, intent_id))
 
     def encode(self, text):
         encoded = self.tokenizer.encode(text)
@@ -67,16 +64,18 @@ class IntentClassifier:
         best_intent = None
         highest_score = -1.0
         
-        for intent, prototype_emb in self.intent_embeddings.items():
+        # Compare against all KB triggers
+        for prototype_emb, intent_id in self.intent_prototypes:
             score = np.dot(query_embedding, prototype_emb)
             if score > highest_score:
                 highest_score = score
-                best_intent = intent
+                best_intent = intent_id
         
-        # Smart Entity Extraction using spaCy
+        # Entity Extraction (spaCy) is still valuable for Generic Intents
+        # or if we need to refine a specific intent (e.g. "open music" -> entity="music")
         entity = self.extract_entity(user_query)
         
-        # Fallback: If spaCy fails to find a distinct object, usage brute force
+        # Fallback Entity Logic
         if not entity:
              words = user_query.split()
              entity = " ".join(words[1:]) if len(words) > 1 else ""
@@ -84,27 +83,18 @@ class IntentClassifier:
         return best_intent, float(highest_score), entity
 
     def extract_entity(self, query):
-        """
-        Uses spaCy dependency parsing to find the Direct Object (dobj) of the command.
-        """
         doc = self.nlp_spacy(query)
         target_entity = ""
         
-        # 1. Look for the main verb (ROOT)
-        # typical structure: "Open (ROOT) the browser (dobj)"
         for token in doc:
             if token.dep_ == "dobj":
-                # We found the object! Get its subtree (e.g. "the nice browser")
+                # Get subtree, remove articles
                 target_entity = " ".join([t.text for t in token.subtree])
-                # Remove articles from the result
                 target_entity = target_entity.replace("the ", "").replace("a ", "").replace("an ", "")
                 return target_entity.strip()
         
-        # 2. If no dobj, look for pobj (object of preposition)
-        # e.g. "Search for (prep) cats (pobj)"
         for token in doc:
             if token.dep_ == "pobj":
-                # Ensure it's related to the root verb
                 target_entity = " ".join([t.text for t in token.subtree])
                 return target_entity.strip()
 
