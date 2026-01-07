@@ -86,6 +86,7 @@ class MainWindow(QMainWindow):
             }
         """)
         self.btn_mic.clicked.connect(self.toggle_voice)
+        self.btn_mic.setEnabled(False) # Wait for AI
         
         search_layout.addWidget(self.search_input)
         search_layout.addWidget(self.btn_mic)
@@ -236,6 +237,7 @@ class MainWindow(QMainWindow):
         self.is_loading = False
         self.search_input.setPlaceholderText("Ask NovaDesk... (e.g. 'Open Spotify')")
         self.search_input.setEnabled(True)
+        self.btn_mic.setEnabled(True)
         self.search_input.setFocus()
 
     def load_stylesheet(self):
